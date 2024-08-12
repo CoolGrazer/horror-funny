@@ -1,0 +1,211 @@
+[gd_scene load_steps=15 format=3 uid="uid://bo146eyct7pvj"]
+
+[ext_resource type="PackedScene" uid="uid://idtthf45afrj" path="res://Player.tscn" id="2_dke4h"]
+[ext_resource type="Texture2D" uid="uid://c12rgicks8vt4" path="res://addons/proto-csgs/textures/dark/texture_08.png" id="3_34gwv"]
+[ext_resource type="PackedScene" uid="uid://b6mopmbsmd105" path="res://Interact.tscn" id="3_xncf6"]
+[ext_resource type="ArrayMesh" uid="uid://cho1ijwchtkuv" path="res://Exclamation.obj" id="4_7f200"]
+[ext_resource type="PackedScene" uid="uid://dxw7cledbpiia" path="res://addons/proto-csgs/proto_csg_box_3d.tscn" id="5_835k2"]
+[ext_resource type="AudioStream" uid="uid://blpvp6j0pjo4j" path="res://Street Fighter III_ Third Strike Online Edition - Knock You Out (Menu Remix).mp3" id="6_bmvr3"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_vusik"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_3qtj0"]
+sky_material = SubResource("ProceduralSkyMaterial_vusik")
+
+[sub_resource type="Environment" id="Environment_j706h"]
+background_mode = 2
+background_energy_multiplier = 0.1
+sky = SubResource("Sky_3qtj0")
+tonemap_mode = 2
+volumetric_fog_ambient_inject = 0.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4bwqq"]
+resource_local_to_scene = true
+albedo_texture = ExtResource("3_34gwv")
+uv1_scale = Vector3(0.25, 0.25, 0.25)
+uv1_triplanar = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rgiur"]
+
+[sub_resource type="Shader" id="Shader_og336"]
+code = "shader_type spatial;
+render_mode cull_disabled;
+
+
+
+uniform float x;
+//varying float y;
+uniform float z;
+
+
+
+uniform vec4 albedo;
+
+
+
+mat3 rotateX(float theta)
+{
+	
+	float cosa = cos(theta);
+	float sina = sin(theta);
+
+ 
+    //Y rotation	
+	mat3 rotate_x  = mat3(
+	   vec3(1.0, 0.0, 0.0),
+	   vec3(0.0, cosa, -sina),
+	   vec3(0.0, sina, cosa)
+	);
+	
+	return rotate_x;
+}
+
+
+
+
+
+mat3 rotateY(float theta)
+{
+	
+	float cosa = cos(theta);
+	float sina = sin(theta);
+
+ 
+    //Y rotation	
+	mat3 rotate_y  = mat3(
+	   vec3(cosa, 0.0, sina),
+	   vec3(0.0, 1.0, 0.0),
+	   vec3(-sina, 0.0, cosa)
+	);
+	
+	return rotate_y;
+}
+
+
+
+mat3 rotateZ(float theta)
+{
+	
+	float cosa = cos(theta);
+	float sina = sin(theta);
+
+ 
+    //Y rotation	
+	mat3 rotate_z  = mat3(
+	   vec3(cosa,-sina, 0.0),
+	   vec3(sina, cosa, 0.0),
+	   vec3(0.0, 0.0, 1.0)
+	);
+	
+	return rotate_z;
+}
+
+
+void vertex()
+{
+	float y = TIME * 0.5;
+	
+	
+	mat3 rotation_matrix =  rotateX(x) * rotateY(y) * rotateZ(z);
+	vec3 rotated_vertex =  rotation_matrix * VERTEX;
+	vec3 rotated_normals =  rotation_matrix * NORMAL;
+
+	VERTEX =  rotated_vertex;
+	NORMAL =  rotated_normals;
+	
+
+}
+
+void fragment()
+{
+	ALBEDO = albedo.rgb;
+	
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8n1fm"]
+render_priority = 0
+shader = SubResource("Shader_og336")
+shader_parameter/x = null
+shader_parameter/z = null
+shader_parameter/albedo = Vector4(1.02, 0, 0, 0)
+
+[sub_resource type="GDScript" id="GDScript_3cklo"]
+script/source = "extends AudioStreamPlayer3D
+
+
+func _on_interact_trigger_3_interacted():
+	if playing:
+		stream_paused = true
+	else:
+		play()
+"
+
+[node name="Test" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+light_energy = 0.825
+shadow_enabled = true
+
+[node name="DirectionalLight3D2" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707104, 0.612376, -0.353553, -1.49013e-08, 0.499998, 0.866027, 0.70711, -0.612371, 0.353551, 0, 0, 0)
+light_energy = 0.825
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_j706h")
+
+[node name="Player" parent="." instance=ExtResource("2_dke4h")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.29209, 2, -0.709575)
+
+[node name="ProtoCSGBox3D" parent="." instance=ExtResource("5_835k2")]
+flip_faces = true
+size = Vector3(160, 10, 160)
+material = SubResource("StandardMaterial3D_4bwqq")
+block_style = 7
+
+[node name="InteractTrigger" parent="ProtoCSGBox3D" instance=ExtResource("3_xncf6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.71588, 0)
+text = "Don't push me."
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ProtoCSGBox3D/InteractTrigger"]
+shape = SubResource("BoxShape3D_rgiur")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ProtoCSGBox3D/InteractTrigger"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.36, 0)
+material_override = SubResource("ShaderMaterial_8n1fm")
+mesh = ExtResource("4_7f200")
+
+[node name="InteractTrigger2" parent="ProtoCSGBox3D" instance=ExtResource("3_xncf6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, -3.71588, 0)
+text = "Push me!"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ProtoCSGBox3D/InteractTrigger2"]
+shape = SubResource("BoxShape3D_rgiur")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ProtoCSGBox3D/InteractTrigger2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.36, 0)
+material_override = SubResource("ShaderMaterial_8n1fm")
+mesh = ExtResource("4_7f200")
+
+[node name="InteractTrigger3" parent="ProtoCSGBox3D" instance=ExtResource("3_xncf6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, -3.71588, 0)
+text = "Push me!"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ProtoCSGBox3D/InteractTrigger3"]
+shape = SubResource("BoxShape3D_rgiur")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ProtoCSGBox3D/InteractTrigger3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00286579, -0.359581, 0)
+material_override = SubResource("ShaderMaterial_8n1fm")
+mesh = ExtResource("4_7f200")
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="ProtoCSGBox3D/InteractTrigger3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 3.71588, 0)
+stream = ExtResource("6_bmvr3")
+script = SubResource("GDScript_3cklo")
+
+[connection signal="interacted" from="ProtoCSGBox3D/InteractTrigger" to="Player" method="_on_interact_trigger_interacted"]
+[connection signal="interacted" from="ProtoCSGBox3D/InteractTrigger2" to="Player" method="_on_interact_trigger_2_interacted"]
+[connection signal="interacted" from="ProtoCSGBox3D/InteractTrigger3" to="ProtoCSGBox3D/InteractTrigger3/AudioStreamPlayer3D" method="_on_interact_trigger_3_interacted"]

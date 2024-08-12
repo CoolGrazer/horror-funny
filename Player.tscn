@@ -1,0 +1,277 @@
+[gd_scene load_steps=8 format=3 uid="uid://idtthf45afrj"]
+
+[sub_resource type="GDScript" id="GDScript_7lig6"]
+script/source = "extends CharacterBody3D
+
+var sens = 0.003
+
+var input : Vector2 = Vector2.ZERO
+var direction : Vector3 = Vector3.ZERO
+
+var maxSpeed : float = 7.0
+
+var sprinting : bool = false
+var crouching : bool = false
+var jumping : bool = false
+var walking : bool = false
+
+var s = 0
+
+var sanity : float = 10.0
+
+var timeStopped = 0
+
+var positionSmooth = 0.5
+var rotationSmooth = 0.4
+
+var jumpTimer : float = -1
+
+var jumpCanceled : bool = false
+var jumpBuffer : bool = false
+
+
+func _ready():
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _input(event):
+	if event is InputEventMouseMotion:
+		
+		rotate_y(event.relative.x * -sens)
+		$Head.rotate_x(event.relative.y * -sens)
+		$Head.rotation_degrees.x = clampf($Head.rotation_degrees.x,-89,89)
+
+func _physics_process(delta):
+	input = Input.get_vector(\"Left\",\"Right\",\"Forward\",\"Backward\")
+	
+	
+	
+	
+	
+	if Input.is_action_pressed(\"Sprint\"):
+		sprinting = true
+	else:
+		sprinting = false
+	
+	if sprinting == true:
+		maxSpeed = 13
+	else:
+		maxSpeed = 7
+	
+	if is_on_floor():
+		_groundMovement()
+		#velocity.y = 0
+	else:
+		_airMovement()
+		
+	if Input.is_action_just_pressed(\"Jump\") and is_on_floor():
+		$AnimationPlayer.play(\"JumpHold\")
+	
+	
+	if Input.is_action_just_released(\"Jump\") and $AnimationPlayer.current_animation == \"JumpHold\" and is_on_floor() and $AnimationPlayer.current_animation_position > 0.3:
+		
+		$AnimationPlayer.play(\"Jump\")
+	elif Input.is_action_just_released(\"Jump\") and $AnimationPlayer.current_animation == \"JumpHold\" and is_on_floor() and $Head.position.y < 0.625:
+		
+		
+		jumpBuffer = true
+	
+	if jumpBuffer and $AnimationPlayer.current_animation == \"JumpHold\" and is_on_floor() and $AnimationPlayer.current_animation_position > 0.3 and !Input.is_action_pressed(\"Jump\"):
+		jumpBuffer = false
+		$AnimationPlayer.play(\"Jump\")
+	
+	move_and_slide()
+	_cameraBop()
+	s += 1
+	
+	$Models.rotation.x = lerp_angle($Models.rotation.x,$Head.rotation.x,rotationSmooth)
+	$Models.rotation.y = lerp_angle($Models.rotation.y,rotation.y,rotationSmooth)
+	$Models/CSGBox3D.rotation.z = -lerp($Models/CSGBox3D.rotation.z,input.x * 1,0.2)
+	$Models.global_position = lerp($Models.global_position,$Head.global_position,positionSmooth)
+	_checkInteract()
+	print(velocity.length())
+
+
+func _jump():
+	if jumpCanceled == true:
+		velocity.y = 3 * (1 + (velocity.length() / 20))
+		velocity += direction * 2
+		jumpCanceled = false
+	else:
+		velocity = velocity.limit_length(12)
+		velocity.y = 6 * (1 + (velocity.length() / 100))
+		
+
+func _groundMovement():
+	direction = Vector3(input.x,0,input.y).rotated(Vector3.UP,rotation.y).normalized()
+	
+	velocity = velocity.lerp(direction * maxSpeed,0.3)
+	
+
+func _airMovement():
+	direction = Vector3(input.x,0,input.y).rotated(Vector3.UP,rotation.y)
+	
+	#velocity = velocity.lerp(direction * maxSpeed,0.3)
+	velocity.y -= 0.21
+
+func _cameraBop():
+	
+	
+	
+	if velocity.length() < 0.1:
+		timeStopped += 1
+		$Head.position.x = lerp($Head.position.x,randf_range(-0.02,0.02),(timeStopped / 5000))
+	
+	
+
+func _checkInteract():
+	var t = $Head/Interact.get_collider()
+	
+	if t == null or !t.is_in_group(\"Interact\") or t.interactable == false:
+		$Head/Label.hide()
+		return
+	$Head/Label.show()
+	$Head/Label.text = t.text
+	
+	if Input.is_action_just_pressed(\"Pickup\"):
+		t.emit_signal(\"interacted\")
+		if t.oneShot == true:
+			t.interactable = false
+
+
+func _on_interact_trigger_interacted():
+	velocity.y = 40
+
+
+func _on_interact_trigger_2_interacted():
+	rotation_degrees.x += 180
+"
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8exxn"]
+
+[sub_resource type="Animation" id="Animation_ii1wd"]
+resource_name = "Jump"
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(0.390698, -0.2, -0.00318462, 0.0265559, 0.226359, 0.625, -0.268337, 0.0389599, 0.25, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+tracks/1/type = "method"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath(".")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"values": [{
+"args": [],
+"method": &"_jump"
+}]
+}
+
+[sub_resource type="Animation" id="Animation_n857c"]
+resource_name = "JumpCancel"
+length = 0.3
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(0.390698, -0.2, -0.00318462, 0.2, 0.0101965, 0.62545, -0.25, 0, 0.1, -0.0206293),
+"times": PackedFloat32Array(0, 0.3)
+}
+
+[sub_resource type="Animation" id="Animation_2i51h"]
+resource_name = "JumpHold"
+length = 99.0
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(0.62545, -0.25, 0, 0.1, -0.0206293, 0.390698, -0.2, -0.00318462, 0.2, 0.0101965),
+"times": PackedFloat32Array(0, 0.3)
+}
+
+[sub_resource type="Animation" id="Animation_lm00w"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(0.625, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_yqh5v"]
+_data = {
+"Jump": SubResource("Animation_ii1wd"),
+"JumpCancel": SubResource("Animation_n857c"),
+"JumpHold": SubResource("Animation_2i51h"),
+"RESET": SubResource("Animation_lm00w")
+}
+
+[node name="Player" type="CharacterBody3D"]
+script = SubResource("GDScript_7lig6")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.625, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="ObjectTarget" type="Node3D" parent="Head"]
+transform = Transform3D(0.707107, 0.37471, -0.599661, 0, 0.848048, 0.529919, 0.707107, -0.37471, 0.599661, 0.185, -0.105, -0.4)
+
+[node name="Interact" type="RayCast3D" parent="Head"]
+target_position = Vector3(0, 0, -2.5)
+
+[node name="Label" type="Label" parent="Head"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -23.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 16
+text = "Press E to Push."
+horizontal_alignment = 1
+
+[node name="Models" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62545, 0)
+top_level = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Models"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29, -0.4, -0.86)
+layers = 8
+size = Vector3(0.1, 0.1, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_8exxn")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_yqh5v")
+}
+autoplay = "RESET"
+blend_times = [&"Jump", &"JumpCancel", 1.0, &"JumpCancel", &"Jump", 1.0]

@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://b6mopmbsmd105"]
+
+[sub_resource type="GDScript" id="GDScript_qpfow"]
+script/source = "extends StaticBody3D
+
+signal interacted
+
+@export var text = \"Press E to Push.\"
+
+@export var oneShot : bool = false
+
+var interactable : bool = true
+"
+
+[node name="InteractTrigger" type="StaticBody3D" groups=["Interact"]]
+script = SubResource("GDScript_qpfow")
