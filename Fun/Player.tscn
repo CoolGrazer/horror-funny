@@ -1,0 +1,92 @@
+[gd_scene load_steps=3 format=3 uid="uid://idtthf45afrj"]
+
+[sub_resource type="GDScript" id="GDScript_7lig6"]
+script/source = "extends CharacterBody3D
+
+var sens = 0.003
+
+var input : Vector2 = Vector2.ZERO
+var direction : Vector3 = Vector3.ZERO
+
+var maxSpeed : float = 7.0
+
+var sprinting : bool = false
+var crouching : bool = false
+var jumping : bool = false
+var walking : bool = false
+
+var s = 0
+
+var sanity : float = 10.0
+
+var timeStopped = 0
+
+var positionSmooth = 0.9
+var rotationSmooth = 0.4
+
+
+func _ready():
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _input(event):
+	if event is InputEventMouseMotion:
+		
+		rotate_y(event.relative.x * -sens)
+		$Head.rotate_x(event.relative.y * -sens)
+		$Head.rotation_degrees.x = clampf(rotation_degrees.x,-90,90)
+
+func _physics_process(delta):
+	input = Input.get_vector(\"Left\",\"Right\",\"Forward\",\"Backward\")
+	
+	
+	$Models.rotation.x = lerp_angle($Models.rotation.x,$Head.rotation.x,rotationSmooth)
+	$Models.rotation.y = lerp_angle($Models.rotation.y,rotation.y,rotationSmooth)
+	$Models/CSGBox3D.rotation.z
+	$Models.global_position = lerp($Models.global_position,$Head.global_position,positionSmooth)
+	if sprinting == true:
+		maxSpeed = 13
+	
+	_groundMovement()
+	move_and_slide()
+	_cameraBop()
+	s += 1
+	
+
+func _groundMovement():
+	direction = Vector3(input.x,0,input.y).rotated(Vector3.UP,rotation.y)
+	
+	velocity = velocity.lerp(direction * maxSpeed,0.3)
+	
+
+func _cameraBop():
+	if velocity.length() < 0.1:
+		timeStopped += 1
+		$Head.position.x = lerp($Head.position.x,randf_range(-0.1,0.1),1 * (timeStopped / 500))
+	
+	
+	
+"
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8exxn"]
+
+[node name="Player" type="CharacterBody3D"]
+script = SubResource("GDScript_7lig6")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62545, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="ObjectTarget" type="Node3D" parent="Head"]
+transform = Transform3D(0.707107, 0.37471, -0.599661, 0, 0.848048, 0.529919, 0.707107, -0.37471, 0.599661, 0.185, -0.105, -0.4)
+
+[node name="Models" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62545, 0)
+top_level = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Models"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29, -0.4, -0.86)
+size = Vector3(0.1, 0.1, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_8exxn")
